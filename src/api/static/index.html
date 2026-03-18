@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Naive RAG Ingestion Test</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --panel: #eef4f8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #0f766e;
+      --accent-hover: #115e59;
+      --border: #dbe3ee;
+      --danger: #b91c1c;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at top right, #dff5f2, var(--bg) 40%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(860px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    h1,
+    h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+    }
+
+    p {
+      margin-top: 0;
+      color: var(--muted);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      align-items: center;
+    }
+
+    .panel {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .viewer {
+      margin-top: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    button {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    input[type="number"] {
+      width: 90px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: white;
+    }
+
+    code,
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    #result,
+    #collectionsResult,
+    #previewResult {
+      margin-top: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      white-space: pre-wrap;
+      min-height: 64px;
+      overflow-x: auto;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(520px, 100%);
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #fecaca;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+    }
+
+    .modal-content h2 {
+      color: var(--danger);
+    }
+
+    .modal-content p {
+      margin: 0 0 10px 0;
+      color: #374151;
+    }
+
+    .modal-content pre {
+      margin: 0;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px;
+      white-space: pre-wrap;
+      color: #7f1d1d;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Naive RAG PDF Ingestion</h1>
+    <p>Upload once. The API will validate the PDF and automatically run indexing, embeddings, and Chroma storage.</p>
+
+    <input id="file" type="file" accept="application/pdf,.pdf" />
+
+    <div class="row">
+      <button id="ingestBtn">Upload PDF</button>
+    </div>
+
+    <div id="result">Waiting for upload...</div>
+
+    <section class="panel">
+      <h2>Temporary Vector DB Viewer</h2>
+      <p>This is internal debug UI only. We can remove it later.</p>
+
+      <div class="viewer">
+        <div class="row">
+          <button id="collectionsBtn">Load Collections</button>
+          <button id="previewBtn">Preview Records</button>
+          <label for="previewLimit">Limit</label>
+          <input id="previewLimit" type="number" min="1" max="50" value="5" />
+        </div>
+
+        <div id="collectionsResult">Collections not loaded yet.</div>
+        <div id="previewResult">Preview not loaded yet.</div>
+      </div>
+    </section>
+  </main>
+
+  <section id="invalidModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <h2>PDF Not Valid For Indexing</h2>
+      <p id="modalMessage">This PDF could not be indexed.</p>
+      <pre id="modalStats">No details.</pre>
+      <div class="row">
+        <button id="closeModalBtn">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const ingestBtn = document.getElementById("ingestBtn");
+    const fileInput = document.getElementById("file");
+    const result = document.getElementById("result");
+    const collectionsBtn = document.getElementById("collectionsBtn");
+    const previewBtn = document.getElementById("previewBtn");
+    const previewLimitInput = document.getElementById("previewLimit");
+    const collectionsResult = document.getElementById("collectionsResult");
+    const previewResult = document.getElementById("previewResult");
+    const invalidModal = document.getElementById("invalidModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const modalMessage = document.getElementById("modalMessage");
+    const modalStats = document.getElementById("modalStats");
+
+    function openInvalidModal(message, stats) {
+      modalMessage.textContent = message || "This PDF could not be indexed.";
+      modalStats.textContent = JSON.stringify(stats || {}, null, 2);
+      invalidModal.classList.add("open");
+      invalidModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeInvalidModal() {
+      invalidModal.classList.remove("open");
+      invalidModal.setAttribute("aria-hidden", "true");
+    }
+
+    async function loadCollections() {
+      collectionsResult.textContent = "Loading collections...";
+      try {
+        const response = await fetch("/vectorstore/collections");
+        const body = await response.json();
+        collectionsResult.textContent = JSON.stringify(body, null, 2);
+      } catch (error) {
+        collectionsResult.textContent = `Failed to load collections: ${error}`;
+      }
+    }
+
+    async function loadPreview() {
+      previewResult.textContent = "Loading preview...";
+      const limit = Number(previewLimitInput.value) || 5;
+      try {
+        const response = await fetch(`/vectorstore/preview?limit=${limit}`);
+        const body = await response.json();
+        previewResult.textContent = JSON.stringify(body, null, 2);
+      } catch (error) {
+        previewResult.textContent = `Failed to load preview: ${error}`;
+      }
+    }
+
+    closeModalBtn.addEventListener("click", closeInvalidModal);
+    invalidModal.addEventListener("click", (event) => {
+      if (event.target === invalidModal) {
+        closeInvalidModal();
+      }
+    });
+
+    collectionsBtn.addEventListener("click", loadCollections);
+    previewBtn.addEventListener("click", loadPreview);
+
+    ingestBtn.addEventListener("click", async () => {
+      closeInvalidModal();
+
+      const selected = fileInput.files[0];
+      if (!selected) {
+        result.textContent = "Please choose a PDF file first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", selected);
+
+      ingestBtn.disabled = true;
+      result.textContent = "Uploading, validating, indexing, embedding, and storing...";
+
+      try {
+        const response = await fetch("/ingest/pdf", {
+          method: "POST",
+          body: formData,
+        });
+
+        const body = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 422) {
+            const detail = body.detail || {};
+            openInvalidModal(detail.message, detail.stats);
+            result.textContent = "Validation failed. See details in the popup.";
+            return;
+          }
+
+          throw new Error(
+            typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail || body)
+          );
+        }
+
+        result.textContent = JSON.stringify(body, null, 2);
+        loadCollections();
+        loadPreview();
+      } catch (error) {
+        result.textContent = `Request failed: ${error}`;
+      } finally {
+        ingestBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
