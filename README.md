@@ -1,4 +1,4 @@
-# Samy, the Grand Maester
+# Samy | The Grand Maester
 
 An educational PDF retrieval assistant that indexes documents locally and answers questions with citations, page jumps, and guided inspection of the full RAG pipeline.
 
@@ -25,11 +25,7 @@ Samy, the Grand Maester is a local full-stack RAG application powered by FastAPI
 
 ## Demo
 
-No public demo yet. The intended experience is local development with:
-
-- FastAPI backend on `:8000`
-- React frontend on `:5173`
-- Ollama running locally
+[![Samy Demo](https://img.youtube.com/vi/CeO8IfL8Xbw/maxresdefault.jpg)](https://www.youtube.com/watch?v=CeO8IfL8Xbw)
 
 ### Example Questions
 
