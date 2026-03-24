@@ -1,0 +1,36 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color: #2a3439;
+    background: #f7f9fb;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-[#f7f9fb] font-sans text-[#2a3439] antialiased;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+
+  textarea {
+    @apply resize-none;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: Manrope, "Segoe UI Variable", "Segoe UI", sans-serif;
+  }
+}
