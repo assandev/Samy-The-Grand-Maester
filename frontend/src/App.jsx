@@ -176,11 +176,21 @@ function formatValue(value) {
   return String(value);
 }
 
-function MetricTile({ label, value }) {
+function SamyMark({ className = "" }) {
+  return <span className={className}>☼</span>;
+}
+
+function MetricTile({ label, value, compact = false }) {
+  const displayValue = formatValue(value);
+  const isLongText = displayValue.length > 48;
+  const valueClassName = compact || isLongText
+    ? "mt-2 break-all text-sm font-bold leading-6 tracking-[-0.01em] text-slate-900"
+    : "mt-2 text-lg font-extrabold tracking-[-0.02em] text-slate-900";
+
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div>
-      <div className="mt-2 text-lg font-extrabold tracking-[-0.02em] text-slate-900">{formatValue(value)}</div>
+      <div className={valueClassName}>{displayValue}</div>
     </div>
   );
 }
@@ -319,7 +329,7 @@ function renderInspector(step, detail) {
         {detail.records_built ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <MetricTile label="Records Built" value={detail.records_built} />
-            <MetricTile label="Metadata File" value={detail.metadata_output_path} />
+            <MetricTile label="Metadata File" value={detail.metadata_output_path} compact />
           </div>
         ) : null}
         <KeyValueGrid entries={entries} />
@@ -774,7 +784,7 @@ function App() {
                 <h1 className="font-display text-[3rem] font-extrabold tracking-[-0.05em] text-slate-900">
                   Data Ingestion
                 </h1>
-                <p className="mx-auto mt-3 max-w-2xl text-[1.05rem] leading-8 text-slate-500">
+                <p className="mx-auto mt-3 max-w-fit whitespace-nowrap text-[0.8rem] leading-8 text-slate-500 sm:text-[0.95rem] lg:text-[1.05rem]">
                   Entrust a manuscript to Samy so the archive can validate, index, and prepare grounded answers.
                 </p>
               </div>
@@ -894,6 +904,24 @@ function App() {
                   );
                 })}
               </div>
+
+              <section className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-4px_rgba(42,52,57,0.06)]">
+                <div className="border-b border-slate-200 px-5 py-4">
+                  <div className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+                    Extraction Inspector
+                  </div>
+                </div>
+
+                <div className="px-5 py-4">
+                  <div className="mb-4 flex gap-4 border-b border-slate-200 pb-3">
+                    <button className="border-b-2 border-[#565e74] pb-2 text-xs font-bold text-[#565e74]">
+                      Active Step Detail
+                    </button>
+                  </div>
+
+                  {renderInspector(openStep, openStep ? steps[openStep].detail : null)}
+                </div>
+              </section>
             </section>
 
             <section className="space-y-4">
@@ -934,7 +962,7 @@ function App() {
 
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-                        {hasIndexedDocument ? "Document ready for QA" : "Upload a PDF to enable grounded answers"}
+                        {hasIndexedDocument ? "Document ready. Ask to Samy!" : "Upload a PDF to enable grounded answers"}
                       </div>
                       <button
                         type="button"
@@ -951,8 +979,8 @@ function App() {
                     {messages.length === 0 && !isQuerying ? (
                       <div className="grid min-h-[220px] place-items-center text-center">
                         <div className="max-w-xs">
-                          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-white text-lg font-bold text-slate-600 shadow-sm">
-                            SG
+                          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-[#565e74] shadow-sm">
+                            <SamyMark />
                           </div>
                           <div className="mt-4 font-display text-lg font-bold text-slate-900">
                             Seek the archive
@@ -966,8 +994,8 @@ function App() {
                       <div className="flex flex-col gap-3">
                         {isQuerying && (
                           <article className="flex gap-3">
-                            <div className="grid h-8 w-8 place-items-center rounded-xl bg-slate-200 text-xs font-bold text-slate-700">
-                              AI
+                            <div className="grid h-8 w-8 place-items-center rounded-xl bg-slate-200 text-sm text-[#565e74]">
+                              <SamyMark />
                             </div>
                             <div className="max-w-[calc(100%-44px)] rounded-2xl rounded-tl-md border border-slate-200 bg-white px-4 py-3">
                               <div className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
@@ -991,21 +1019,21 @@ function App() {
                           >
                             <div
                               className={`grid h-8 w-8 place-items-center rounded-xl text-xs font-bold ${message.role === "user"
-                                  ? "order-2 bg-[#dae2fd] text-[#4a5268]"
-                                  : "bg-slate-200 text-slate-700"
+                                ? "order-2 bg-[#dae2fd] text-[#4a5268]"
+                                : "bg-slate-200 text-[#565e74]"
                                 }`}
                             >
-                              {message.role === "user" ? "U" : "AI"}
+                              {message.role === "user" ? "U" : <SamyMark className="text-sm font-normal" />}
                             </div>
 
                             <div
                               className={`max-w-[calc(100%-44px)] rounded-2xl border px-4 py-3 ${message.role === "user"
-                                  ? "rounded-tr-md border-[#cbd5f5] bg-[#dae2fd] text-slate-800"
-                                  : "rounded-tl-md border-slate-200 bg-white text-slate-900"
+                                ? "rounded-tr-md border-[#cbd5f5] bg-[#dae2fd] text-slate-800"
+                                : "rounded-tl-md border-slate-200 bg-white text-slate-900"
                                 }`}
                             >
                               <div className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                                {message.role === "user" ? "You" : "Assistant"}
+                                {message.role === "user" ? "You" : "Grand Maester Samy"}
                               </div>
                               <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
 
@@ -1116,24 +1144,6 @@ function App() {
                         citation={selectedCitation}
                         onClear={() => setSelectedCitation(null)}
                       />
-                    </div>
-                  </section>
-
-                  <section className="overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_-4px_rgba(42,52,57,0.06)]">
-                    <div className="border-b border-slate-200 px-5 py-4">
-                      <div className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
-                        Extraction Inspector
-                      </div>
-                    </div>
-
-                    <div className="px-5 py-4">
-                      <div className="mb-4 flex gap-4 border-b border-slate-200 pb-3">
-                        <button className="border-b-2 border-[#565e74] pb-2 text-xs font-bold text-[#565e74]">
-                          Active Step Detail
-                        </button>
-                      </div>
-
-                      {renderInspector(openStep, openStep ? steps[openStep].detail : null)}
                     </div>
                   </section>
                 </div>
