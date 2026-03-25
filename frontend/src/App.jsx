@@ -68,6 +68,43 @@ function prettyJson(value, fallback) {
   return JSON.stringify(value, null, 2);
 }
 
+function parseMessageBlocks(content) {
+  if (!content) {
+    return [];
+  }
+
+  const blocks = [];
+  const pattern = /```(\w+)?\n?([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      blocks.push({
+        type: "text",
+        content: content.slice(lastIndex, match.index),
+      });
+    }
+
+    blocks.push({
+      type: "code",
+      language: match[1] || "",
+      content: match[2].trim(),
+    });
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    blocks.push({
+      type: "text",
+      content: content.slice(lastIndex),
+    });
+  }
+
+  return blocks;
+}
+
 function citationLabel(citation) {
   const title = citation.title || citation.filename || "Document";
   const page = citation.page_number ?? "?";
@@ -213,6 +250,70 @@ function PreviewBlock({ label, text }) {
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div>
       <p className="mt-3 line-clamp-6 text-sm leading-7 text-slate-700">{text || "No preview available."}</p>
+    </div>
+  );
+}
+
+function CodeBlock({ language, content }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2">
+        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+          {language || "Code"}
+        </div>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600 transition hover:bg-slate-100"
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto px-4 py-4 text-xs leading-6 text-slate-800">
+        <code>{content}</code>
+      </pre>
+    </div>
+  );
+}
+
+function MessageContent({ content }) {
+  const blocks = parseMessageBlocks(content);
+
+  if (blocks.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, index) => {
+        if (block.type === "code") {
+          return (
+            <CodeBlock key={`code-${index}`} language={block.language} content={block.content} />
+          );
+        }
+
+        if (!block.content.trim()) {
+          return null;
+        }
+
+        return (
+          <div key={`text-${index}`} className="whitespace-pre-wrap text-sm leading-6">
+            {block.content.trim()}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1035,7 +1136,7 @@ function App() {
                               <div className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                                 {message.role === "user" ? "You" : "Grand Maester Samy"}
                               </div>
-                              <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
+                              <MessageContent content={message.content} />
 
                               {message.citations.length > 0 && (
                                 <div className="mt-3 flex flex-wrap gap-2">
