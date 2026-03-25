@@ -25,14 +25,8 @@ Samy, the Grand Maester is a local full-stack RAG application powered by FastAPI
 
 ## Demo
 
-<<<<<<< HEAD
-[![Samy Demo](https://img.youtube.com/vi/CeO8IfL8Xbw/maxresdefault.jpg)](https://www.youtube.com/watch?v=CeO8IfL8Xbw)
-=======
-## Demo
-
 [![Samy Demo](https://img.youtube.com/vi/CeO8IfL8Xbw/maxresdefault.jpg)](https://www.youtube.com/watch?v=CeO8IfL8Xbw)
 
->>>>>>> ad23b6c (feat: :sparkles: Retrieval process and LLM call)
 
 ### Example Questions
 
